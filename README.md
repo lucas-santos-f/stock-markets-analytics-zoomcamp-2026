@@ -80,3 +80,87 @@ Every horizon loses money at the median, and it gets monotonically worse the lon
 ### Takeaway
 
 Buying IPOs at the first day's close and holding is a losing strategy in this sample: the median return is negative at every horizon from 1 to 12 months, and only about a third of the stocks are above water. The mean looks much better than the median because a handful of extreme winners distort it — which is exactly the trap of judging this strategy by the average.
+
+## Homework 3 — The Model
+
+[Assignment](https://github.com/DataTalksClub/stock-markets-analytics-zoomcamp/blob/main/cohorts/2026/homework3.md)
+
+`sma_hw3.py` reproduces the Module 3 Colab pipeline locally: it rebuilds the
+variable sets, adds the month + week-of-month dummies, redoes the temporal
+split, adds two new hand rules, fits the decision trees and tunes the depth.
+
+```bash
+pip install pandas numpy scikit-learn pyarrow gdown
+gdown https://drive.google.com/uc?id=1oQSUMCs2DyQQIh8Y62UhrT00cIsE9Sr5 -O stocks_df_combined_2026_09_18.parquet.brotli
+python sma_hw3.py
+```
+
+### Results
+
+Dummies: 115 in total, 60 of them from `month_wom` — matching the assignment.
+
+**Q1 — Most correlated month + week-of-month dummy**
+
+| Dummy | Correlation | Absolute |
+|---|---|---|
+| `month_wom_October_w4` | 0.0246 | **0.025** |
+| `month_wom_November_w3` | 0.0233 | 0.023 |
+| `month_wom_February_w1` | -0.0209 | 0.021 |
+
+October and November show up again, now at week level.
+
+**Q2 — New hand rules**
+
+| Rule | Positive calls on TEST | Precision |
+|---|---|---|
+| `pred0_manual_cci` | 921 | 0.565 |
+| `pred1_manual_prev_g1` | 19,158 | 0.579 |
+| `pred2_manual_prev_g1_and_snp` | 15,244 | 0.573 |
+| `pred3_manual_dgs10_5` | 15,910 | **0.588** |
+| `pred4_manual_dgs10_fedfunds` | 15,921 | 0.503 |
+
+The 10-year/5-year yield rule beats every earlier hand rule; the Fed funds rule
+is barely better than a coin flip.
+
+**Q3 — Records only the tree gets right**
+
+1,243 records on the TEST set where `pred5_clf_10` is correct while `pred0`
+through `pred4` are all wrong (tree precision on TEST: 0.591).
+
+**Q4 — Depth tuning**
+
+| max_depth | Precision on TEST |
+|---|---|
+| 1 | 0.570 |
+| 2 | 0.623 |
+| 3 | 0.572 |
+| **4** | **0.629** |
+| 6 | 0.606 |
+| 8 | 0.622 |
+| 10 | 0.591 |
+| 12 | 0.582 |
+
+Best depth is **4**, at 0.629 precision — above the 0.58 the assignment expects,
+and deeper trees get worse, which is overfitting in plain sight.
+
+### Q5 — What data is missing
+
+In the order I would add it:
+
+- **News flow and sentiment per company** (headline counts and tone over 1/7/30
+  days). The tree only ever splits on macro and price; what moves a single stock
+  over the next 30 days is usually company news. Source: GDELT, or Alpha
+  Vantage's news endpoint.
+- **Quarterly fundamentals and earnings surprise** (reported vs. expected
+  earnings per share, revenue, margins, debt/EBITDA, P/E). Source: Financial
+  Modeling Prep, or yfinance's statements.
+- **Analyst estimate revisions** over the last 90 days — one of the more durable
+  signals for 1-to-3-month returns.
+- **Positioning and liquidity**: short interest, volume relative to its 3-month
+  average, options volume. Source: FINRA and yfinance.
+- **Non-US macro**, since the dataset covers India and the EU: ECB and RBI
+  policy rates and inflation, EUR/USD and INR/USD. Right now Indian and European
+  stocks are explained with US rates only, which is a clear gap.
+- **Calendar features**: days to the next earnings report, days to the next
+  central bank meeting, options expiry. These would absorb part of the
+  seasonality that currently lands in the week-of-month dummies.
