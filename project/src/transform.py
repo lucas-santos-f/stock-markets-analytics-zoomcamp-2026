@@ -127,6 +127,10 @@ def build_dataset(raw):
     df['rel_strength_90d'] = df.growth_90d / df.growth_ibov_90d
     df['excess_growth_30d'] = df.growth_30d - df.cdi_20d ** 1.5   # 30 trading days of CDI
 
+    # where the stock stands against the other 39 on the same day (0 = lowest, 1 = highest)
+    for c in RANKED:
+        df[f'rank_{c}'] = df.groupby('Date')[c].rank(pct=True)
+
     # target: beat the risk-free rate over the next month, not just end above zero
     cdi_ahead = df.groupby('Ticker')['cdi_20d'].shift(-HORIZON)
     df[TARGET] = (df[f'growth_future_{HORIZON}d'] > cdi_ahead).astype(int)
@@ -145,6 +149,9 @@ def build_dataset(raw):
     return df
 
 
+RANKED = ['growth_7d', 'growth_30d', 'growth_90d', 'growth_252d', 'rsi', 'volatility', 'dist_52w_high',
+          'dist_52w_low', 'volume_ratio_60d', 'beta_252d', 'natr', 'rel_strength_90d', 'mom', 'cci', 'adx']
+
 CATEGORICAL = ['Month', 'Weekday', 'Ticker', 'Sector', 'rsi_bin', 'vol_regime', 'selic_regime']
 TO_DROP = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'split', 'cdi_daily']
 
@@ -154,6 +161,12 @@ def feature_sets(df):
     numerical = [c for c in df.columns if c not in CATEGORICAL + TO_DROP + to_predict
                  and pd.api.types.is_numeric_dtype(df[c])]
     return numerical, to_predict
+
+
+def market_wide(df, numerical):
+    """Columns that take the same value for every stock on a given day (macro, indexes)."""
+    s = df[df.Date.dt.year == 2015]
+    return [c for c in numerical if s.groupby('Date')[c].nunique().max() <= 1]
 
 
 def add_dummies(df):
