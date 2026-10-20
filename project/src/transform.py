@@ -136,6 +136,12 @@ def build_dataset(raw):
     df[TARGET] = (df[f'growth_future_{HORIZON}d'] > cdi_ahead).astype(int)
     df.loc[df[f'growth_future_{HORIZON}d'].isna() | cdi_ahead.isna(), TARGET] = np.nan
 
+    # Yahoo has a handful of broken prices for B3 (CMIG4 2006, SUZB3 2007, UGPA3 2021, ...):
+    # one day jumps of 50%+ that revert. Rows whose next 20 days cross one get no target.
+    jump = (df.groupby('Ticker').Close.pct_change().abs() > 0.5).astype(int)
+    ahead = jump.groupby(df.Ticker).transform(lambda s: s[::-1].rolling(HORIZON, min_periods=1).max()[::-1].shift(-1))
+    df.loc[ahead == 1, [TARGET, f'growth_future_{HORIZON}d']] = np.nan
+
     # categorical and binned features
     df['Month'] = df.Date.dt.strftime('%B')
     df['Weekday'] = df.Date.dt.weekday.astype(str)
