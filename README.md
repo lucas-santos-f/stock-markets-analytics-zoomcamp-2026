@@ -209,3 +209,8 @@ budget equally between them, with at most one open position per ticker. Skip new
 entries while the 10-year yield is above 4.5%, since that rule carried signal in
 Module 3. Hold 30 days as now, but sell early on a 10% loss. That should bring it down
 to 2 or 3 trades a day and cut fees, and it can be checked on TEST the same way as sim1.
+## Course project
+
+[project/](project/) — a monthly strategy for 40 B3 stocks that tries to beat the CDI,
+with Brazilian central bank data, three models, day by day simulations and a cron-ready
+`main.py`. Details and results in [project/README.md](project/README.md).
