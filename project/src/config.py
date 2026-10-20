@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 
 # 40 liquid B3 stocks with history back to at least 2014. All of them are still listed
@@ -35,7 +35,7 @@ FRED_SERIES = ['DGS10', 'DGS2', 'FEDFUNDS']
 
 START = '2005-01-01'
 HORIZON = 20                  # trading days ahead, about one calendar month
-TARGET = f'is_positive_growth_{HORIZON}d_future'
+TARGET = f'is_beating_cdi_{HORIZON}d_future'
 
 TRAIN_END = '2018-12-31'
 VALID_END = '2021-12-31'      # test starts on 2022-01-01
