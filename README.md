@@ -164,3 +164,48 @@ In the order I would add it:
 - **Calendar features**: days to the next earnings report, days to the next
   central bank meeting, options expiry. These would absorb part of the
   seasonality that currently lands in the week-of-month dummies.
+
+## Homework 4 — Trading System
+
+[Assignment](https://github.com/DataTalksClub/stock-markets-analytics-zoomcamp/blob/main/cohorts/2026/homework4.md)
+
+`sma_hw4.py` runs the course's `[2026]_Module_04_Colab_Trading_Simulations.ipynb` headless, once per
+question, with only the edits that question asks for. The notebook needs pandas 2.x
+(run here with pandas 2.2.2, scikit-learn 1.6.1, the Colab versions); on pandas 3 it fails at
+the `Month` dummies.
+
+```bash
+python sma_hw4.py "[2026]_Module_04_Colab_Trading_Simulations.ipynb" stocks_df_combined_2026_09_18.parquet.brotli q1
+```
+
+The unchanged notebook reproduces the reference: 301 features, best ML predictor `pred5_clf_10`
+at CAGR 1.1196.
+
+**Q1 — fewer dummies.** Dropping `Ticker` and `month_wom` leaves 208 features.
+`pred10_rf_best_rule_55` goes from 1.0936 to **1.136** and becomes the best ML predictor,
+at 5.16 trades per day.
+
+**Q2 — random forest thresholds.**
+
+| Rule | Trades on TEST | Avg trades/day | CAGR |
+|---|---|---|---|
+| `pred10_rf_best_rule_55` | 3514 | 5.16 | 1.1359 |
+| `pred12_rf_best_rule_56` | 2641 | **4.40** | **1.1178** |
+| `pred13_rf_best_rule_57` | 1889 | 3.81 | 1.0913 |
+| `pred14_rf_best_rule_58` | 1330 | 3.46 | 1.0665 |
+| `pred16_rf_best_rule_60` | 583 | 2.78 | 1.0442 |
+| `pred20_rf_best_rule_64` | 65 | 1.44 | 1.0089 |
+
+Second best under 5 trades a day: threshold **0.56**. One point up in the threshold costs
+about two points of CAGR here, so the trade-off is steep.
+
+**Q3 — target above 2.2%.** The share of class 1 drops from 59.2% to 49.7%.
+`pred5_clf_10` stays the best ML predictor at CAGR 1.1219, with 7337 trades on TEST,
+**8.0 per day** on average (down from 10.3).
+
+**Q4 — strategy.** Only buy when the random forest at 0.56 and `pred5_clf_10` agree. Each
+day rank those stocks by the forest probability, keep the top 3 and split the day's
+budget equally between them, with at most one open position per ticker. Skip new
+entries while the 10-year yield is above 4.5%, since that rule carried signal in
+Module 3. Hold 30 days as now, but sell early on a 10% loss. That should bring it down
+to 2 or 3 trades a day and cut fees, and it can be checked on TEST the same way as sim1.
